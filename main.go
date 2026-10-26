@@ -47,6 +47,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/app/", fsHandler)
 
+	mux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("POST /api/chirps", apiCfg.handlerCreateChirp)
 	mux.HandleFunc("GET /api/chirps", apiCfg.handlerListChirps)
