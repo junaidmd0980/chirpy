@@ -1,7 +1,12 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/alexedwards/argon2id"
@@ -57,10 +62,34 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("unknown claim type")
 	}
 
-	userId, err := uuid.Parse(claims.Subject)
+	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("invalid user id in the token subject: %v", err)
 	}
 
-	return userId, nil
+	return userID, nil
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return "", errors.New("authorization header not found")
+	}
+
+	prefix, token, found := strings.Cut(authHeader, "Bearer ")
+	if !found || strings.TrimSpace(prefix) != "" {
+		return "", errors.New("invalid authorization header")
+	}
+
+	return strings.TrimSpace(token), nil
+}
+
+func MakeRefreshToken() string {
+	c := 32
+	b := make([]byte, c)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(b)
 }

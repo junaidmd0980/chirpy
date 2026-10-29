@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -58,4 +59,50 @@ func TestWrongSecretJWt(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for wrong secret, got nil")
 	}
+}
+
+func TestGetBearerToken(t *testing.T) {
+	t.Run("Valid Header", func(t *testing.T) {
+		headers := http.Header{}
+		headers.Set("Authorization", "Bearer my-secret-token-123")
+
+		token, err := GetBearerToken(headers)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		expected := "my-secret-token-123"
+		if token != expected {
+			t.Errorf("expected token %q, got %q", expected, token)
+		}
+	})
+
+	t.Run("Missing Header", func(t *testing.T) {
+		headers := http.Header{}
+
+		_, err := GetBearerToken(headers)
+		if err == nil {
+			t.Error("expected error for missing header, got nil")
+		}
+	})
+
+	t.Run("Malformed Header - No Bearer Prefix", func(t *testing.T) {
+		headers := http.Header{}
+		headers.Set("Authorization", "my-secret-token-123")
+
+		_, err := GetBearerToken(headers)
+		if err == nil {
+			t.Error("expected error for malformed header, got nil")
+		}
+	})
+
+	t.Run("Malformed Header - Wrong Prefix", func(t *testing.T) {
+		headers := http.Header{}
+		headers.Set("Authorization", "Basic my-secret-token-123")
+
+		_, err := GetBearerToken(headers)
+		if err == nil {
+			t.Error("expected error for wrong prefix, got nil")
+		}
+	})
 }
