@@ -49,23 +49,55 @@ func main() {
 		polkaKey:       polkaKey,
 	}
 
-	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
-
 	mux := http.NewServeMux()
+
+	// ==========================================
+	// 1. Fileserver & Static Assets
+	// ==========================================
+	// Serves static files and client-side web app from the root directory.
+	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
 	mux.Handle("/app/", fsHandler)
 
+	// ==========================================
+	// 2. Health & Readiness
+	// ==========================================
+	// Checks if the server is up and operational.
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+
+	// ==========================================
+	// 3. Authentication
+	// ==========================================
+	// Handles user login, session token refreshing, and token revocation.
 	mux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
 	mux.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh)
 	mux.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke)
-	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+
+	// ==========================================
+	// 4. Users
+	// ==========================================
+	// Handles user account creation and profile updates.
+	mux.HandleFunc("POST /api/users", apiCfg.handlerUserCreate)
+	mux.HandleFunc("PUT /api/users", apiCfg.handlerUserUpdate)
+
+	// ==========================================
+	// 5. Chirps (Posts)
+	// ==========================================
+	// Handles creating, listing, fetching individual posts, and deleting chirps.
 	mux.HandleFunc("POST /api/chirps", apiCfg.handlerCreateChirp)
 	mux.HandleFunc("GET /api/chirps", apiCfg.handlerListChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirp)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerDeleteChirp)
-	mux.HandleFunc("POST /api/users", apiCfg.handlerUserCreate)
-	mux.HandleFunc("PUT /api/users", apiCfg.handlerUserUpdate)
+
+	// ==========================================
+	// 6. Webhooks & Third-Party Integrations
+	// ==========================================
+	// Handles incoming webhook notifications from external services like Polka.
 	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.handlerUserUpgrade)
 
+	// ==========================================
+	// 7. Admin & Metrics
+	// ==========================================
+	// Provides internal server metrics and database state reset capabilities.
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 
